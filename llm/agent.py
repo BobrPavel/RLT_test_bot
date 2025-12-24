@@ -1,3 +1,9 @@
+# --------------------------------------------------------------------------------
+# Агент
+# --------------------------------------------------------------------------------
+# Импорты
+# --------------------------------------------------------------------------------
+
 import uuid
 
 from typing import Sequence
@@ -9,6 +15,12 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
 
+# --------------------------------------------------------------------------------
+# Код агента
+# --------------------------------------------------------------------------------
+
+
+
 class LLMAgent:
     def __init__(self, model: LanguageModelLike, tools: Sequence[BaseTool]):
         self._model = model
@@ -18,7 +30,7 @@ class LLMAgent:
         self._agent = None
 
 
-    async def ainit(self):
+    async def ainit(self): 
         """Асинхронная инициализация агента"""
         self._agent = create_react_agent(
             self._model,

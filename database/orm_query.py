@@ -1,29 +1,38 @@
+# --------------------------------------------------------------------------------
+# Все ORM запросы проекта
+# --------------------------------------------------------------------------------
+# Импорты
+# --------------------------------------------------------------------------------
+
 import os
 import json
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-# from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-
 from database.models import Videos, Video_snapshots
 
+# --------------------------------------------------------------------------------
+# Настройки и константы
+# --------------------------------------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # app/
 JSON_PATH = os.path.join(BASE_DIR, "..", "common", "videos.json")
 
+# --------------------------------------------------------------------------------
+# ORM запросы
+# --------------------------------------------------------------------------------
 
-# ORM запрос на создание базы данных
 
-async def orm_create_db(session: AsyncSession):
+async def orm_create_db(session: AsyncSession): # ORM запрос на создание базы данных
 
     for model in (Videos, Video_snapshots):
-        query = select(model).limit(1)  # достаточно проверить, есть ли хоть одна запись
+        query = select(model).limit(1)  # проверка есть ли уже записи
         result = await session.execute(query)
-        if result.first():  # если хотя бы одна запись есть
-            return  # прекращаем выполнение
+        if result.first():  # если хотя бы одна запись есть, то прекращаем выполнение
+            return
 
 
     with open(JSON_PATH, encoding="utf-8") as f:
@@ -63,9 +72,10 @@ async def orm_create_db(session: AsyncSession):
     await session.commit()
 
 
-# ORM запрос 
 
-async def execute_query(plan: dict, session: AsyncSession):
+async def execute_query(plan: dict, session: AsyncSession): # Получапет QueryPlan, преобразует его в ORM запрос и исполняет
+
+    # Метрики. По ним преобразуется QueryPlan в запрос
     MODEL_MAP = {
         "videos": Videos,
         "video_snapshots": Video_snapshots,

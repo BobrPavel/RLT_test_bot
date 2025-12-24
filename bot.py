@@ -26,8 +26,8 @@ from handlers.user_private import user_private_router
 # Настройки и константы
 # --------------------------------------------------------------------------------
 
-# bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML)) # если импользуется токен в .env файле, то используем эту строку
-bot = Bot(token="you_token", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token=os.getenv('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML)) # если импользуется токен в .env файле, то используем эту строку
+# bot = Bot(token="you_token", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 bot.my_admins_list = []
 
 dp = Dispatcher()

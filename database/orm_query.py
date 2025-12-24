@@ -1,10 +1,10 @@
 import os
 import json
 
-# from sqlalchemy import select, update, delete, func, case
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 # from sqlalchemy.orm import joinedload
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 
@@ -15,7 +15,17 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # app/
 JSON_PATH = os.path.join(BASE_DIR, "..", "common", "videos.json")
 
 
+# ORM запрос на создание базы данных
+
 async def orm_create_db(session: AsyncSession):
+
+    for model in (Videos, Video_snapshots):
+        query = select(model).limit(1)  # достаточно проверить, есть ли хоть одна запись
+        result = await session.execute(query)
+        if result.first():  # если хотя бы одна запись есть
+            return  # прекращаем выполнение
+
+
     with open(JSON_PATH, encoding="utf-8") as f:
         payload = json.load(f)
 
@@ -51,3 +61,107 @@ async def orm_create_db(session: AsyncSession):
         session.add(video)
 
     await session.commit()
+
+
+# ORM запрос 
+
+async def execute_query(plan: dict, session: AsyncSession):
+    MODEL_MAP = {
+        "videos": Videos,
+        "video_snapshots": Video_snapshots,
+    }
+
+    METRIC_MAP = {
+        "videos": {
+            "videos": "id",
+            "video_snapshots": "video_id",
+            "delta": "video_id",
+        },
+        "views": {
+            "videos": "views_count",
+            "video_snapshots": "views_count",
+            "delta": "delta_views_count",
+        },
+        "likes": {
+            "videos": "likes_count",
+            "video_snapshots": "likes_count",
+            "delta": "delta_likes_count",
+        },
+    }
+
+    OPERATION_MAP = {
+        "count": func.count,
+        "sum": func.sum,
+        "delta": func.sum,
+    }
+
+    model = MODEL_MAP[plan["source"]]
+    metric_type = "delta" if plan["operation"] == "delta" else plan["source"]
+
+    column_name = METRIC_MAP[plan["metric"]][metric_type]
+    column = getattr(model, column_name)
+    agg_column = OPERATION_MAP[plan["operation"]](column)
+
+    # ❗ ВАЖНО: select, а не session.query
+    stmt = select(agg_column)
+
+    # Filters (=)
+    for field, value in plan.get("filters", {}).items():
+        if value is not None:
+            stmt = stmt.where(getattr(model, field) == value)
+
+    # Conditions
+    for cond in plan.get("conditions", []):
+        col = getattr(model, cond["field"])
+        op = cond["operator"]
+        val = cond["value"]
+
+        if op == ">":
+            stmt = stmt.where(col > val)
+        elif op == ">=":
+            stmt = stmt.where(col >= val)
+        elif op == "<":
+            stmt = stmt.where(col < val)
+        elif op == "<=":
+            stmt = stmt.where(col <= val)
+        elif op == "=":
+            stmt = stmt.where(col == val)
+
+    # Time range
+
+    time_range = plan.get("time_range")
+
+    if time_range:
+        if time_range["type"] == "last_n_days":
+            stmt = stmt.where(
+                model.created_at >= datetime.now(tz=timezone.utc)
+                - timedelta(days=time_range["value"])
+            )
+
+        elif time_range["type"] == "between":
+            date_column = (
+                model.video_created_at
+                if plan["source"] == "videos"
+                else model.created_at
+            )
+
+            start_date = datetime.fromisoformat(time_range["from"]).replace(
+                tzinfo=timezone.utc
+            )
+            end_date = (
+                datetime.fromisoformat(time_range["to"])
+                .replace(tzinfo=timezone.utc)
+                + timedelta(days=1)
+            )
+
+            stmt = stmt.where(
+                date_column >= start_date,
+                date_column < end_date,
+            )
+
+
+    # Execute
+    result = await session.execute(stmt)
+    value = result.scalar()
+
+    return int(value or 0)

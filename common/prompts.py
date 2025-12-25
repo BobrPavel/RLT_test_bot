@@ -19,6 +19,7 @@ SYSTEM_PROMPT = """
 
   {
     "source": "videos | video_snapshots",
+    
     "operation": "count | sum | delta",
     "metric": "videos | views | likes | reports | comments",
     "filters": {

@@ -26,5 +26,4 @@ async def query_tool(query_plan_input: dict) -> str:
     async with session_maker() as session:
         result = await execute_query(query_plan, session)
 
-    print(str(result))
     return str(result)

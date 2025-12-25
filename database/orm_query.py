@@ -112,15 +112,28 @@ async def execute_query(plan: dict, session: AsyncSession): # Получапет
     column = getattr(model, column_name)
     agg_column = OPERATION_MAP[plan["operation"]](column)
 
-    # ❗ ВАЖНО: select, а не session.query
+    
     stmt = select(agg_column)
 
-    # Filters (=)
+    if plan["source"] == "video_snapshots":
+        stmt = stmt.join(
+            Videos,
+            Video_snapshots.video_id == Videos.id
+    )
+
+
+    # Фильтр (=)
     for field, value in plan.get("filters", {}).items():
-        if value is not None:
+        if value is None:
+                continue
+            
+        if field == "creator_id":
+            stmt = stmt.where(Videos.creator_id == value)
+        else:
             stmt = stmt.where(getattr(model, field) == value)
 
-    # Conditions
+
+    # Операции сравнения
     for cond in plan.get("conditions", []):
         col = getattr(model, cond["field"])
         op = cond["operator"]
@@ -137,8 +150,7 @@ async def execute_query(plan: dict, session: AsyncSession): # Получапет
         elif op == "=":
             stmt = stmt.where(col == val)
 
-    # Time range
-
+    # Временные промежутки
     time_range = plan.get("time_range")
 
     if time_range:
@@ -154,23 +166,25 @@ async def execute_query(plan: dict, session: AsyncSession): # Получапет
                 if plan["source"] == "videos"
                 else model.created_at
             )
-
-            start_date = datetime.fromisoformat(time_range["from"]).replace(
-                tzinfo=timezone.utc
-            )
-            end_date = (
-                datetime.fromisoformat(time_range["to"])
-                .replace(tzinfo=timezone.utc)
-                + timedelta(days=1)
-            )
-
+        
+            start_raw = time_range["from"]
+            end_raw = time_range["to"]
+        
+            start_date = datetime.fromisoformat(start_raw).replace(tzinfo=timezone.utc)
+            end_date = datetime.fromisoformat(end_raw).replace(tzinfo=timezone.utc)
+        
+            # Если в 'to' время не указано, расширяем до конца дня
+            if "T" not in end_raw:
+                end_date += timedelta(days=1)
+        
             stmt = stmt.where(
                 date_column >= start_date,
                 date_column < end_date,
             )
 
 
-    # Execute
+
+    # Исполнение
     result = await session.execute(stmt)
     value = result.scalar()
 

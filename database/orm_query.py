@@ -7,7 +7,7 @@
 import os
 import json
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, cast, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -111,7 +111,10 @@ async def execute_query(plan: dict, session: AsyncSession): # Получапет
     column_name = METRIC_MAP[plan["metric"]][metric_type]
     column = getattr(model, column_name)
 
-    if plan["operation"] == "count" and plan.get("distinct_by"):
+    if plan.get("distinct_by_date"):
+        column = getattr(model, plan["distinct_by_date"])
+        agg_column = func.count(func.distinct(cast(column, Date)))
+    elif plan["operation"] == "count" and plan.get("distinct_by"):
         distinct_col = getattr(model, plan["distinct_by"])
         agg_column = func.count(func.distinct(distinct_col))
     else:

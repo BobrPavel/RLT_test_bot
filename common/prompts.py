@@ -23,6 +23,7 @@ SYSTEM_PROMPT = """
     "operation": "count | sum | delta",
     "metric": "videos | views | likes | reports | comments",
     "distinct_by": "creator_id",
+    "distinct_by_date": "video_created_at"
     "filters": {
       "creator_id": "UUID | null"
     },
@@ -50,7 +51,8 @@ SYSTEM_PROMPT = """
   - Если вопрос о КОЛИЧЕСТВЕ объектов → count
   - Если вопрос о ТЕКУЩЕМ значении → sum
   - Если вопрос об ИЗМЕНЕНИИ / ПРИРОСТЕ → delta
-  - Если в вопросе есть слова «разные», «уникальные» — используй поле "distinct_by" в QueryPlan.
+  - Если в вопросе есть слова «разные креаторы», «уникальные креаторы» — используй поле "distinct_by" в QueryPlan.
+  - Если в вопросе есть слова «разные даты», «уникальные даты», «разные дни», «уникальные дни» — используй поле "distinct_by_date" в QueryPlan.
 
   Важно: операция "delta" всегда должна агрегировать значение delta_* по всем выбранным видео. 
   То есть, если вопрос говорит "в сумме", суммируй delta_views_count / delta_likes_count / и т.д. по всем объектам, которые подходят под условия фильтров и time_range.

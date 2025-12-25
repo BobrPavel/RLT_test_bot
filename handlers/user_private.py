@@ -35,21 +35,13 @@ async def start_cmd(message: types.Message):
 # Обработка всех входящих сообщений
 @user_private_router.message()
 async def request_handler(message: types.Message):
-    print(f"Вопрос: {message.text}")
     agent = await init_agent()
     try:
         query_plan_str = await agent.invoke(content=f"{SYSTEM_PROMPT}\n{message.text}")
         query_plan = json.loads(query_plan_str)
         result = await query_tool(query_plan)
-    except Exception as e:
-        print(f"Ошиюка: {e}")
+    except Exception:
         result = "0"
 
-
-    # query_plan_str = await agent.invoke(content=f"{SYSTEM_PROMPT}\n{message.text}")
-    # query_plan = json.loads(query_plan_str)
-    # result = await query_tool(query_plan)
-
-    print(f"Ответ: {str(result)}")
     await message.answer(str(result))
 

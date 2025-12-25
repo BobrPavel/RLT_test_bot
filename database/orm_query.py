@@ -111,10 +111,11 @@ async def execute_query(plan: dict, session: AsyncSession): # Получапет
     column_name = METRIC_MAP[plan["metric"]][metric_type]
     column = getattr(model, column_name)
 
-    if plan.get("distinct_by_date"):
+
+    if plan.get("distinct_by_date"): # уникальные даты
         column = getattr(model, plan["distinct_by_date"])
         agg_column = func.count(func.distinct(cast(column, Date)))
-    elif plan["operation"] == "count" and plan.get("distinct_by"):
+    elif plan["operation"] == "count" and plan.get("distinct_by"): # уникальные креаторы
         distinct_col = getattr(model, plan["distinct_by"])
         agg_column = func.count(func.distinct(distinct_col))
     else:

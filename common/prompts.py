@@ -22,6 +22,7 @@ SYSTEM_PROMPT = """
     
     "operation": "count | sum | delta",
     "metric": "videos | views | likes | reports | comments",
+    "distinct_by": "creator_id",
     "filters": {
       "creator_id": "UUID | null"
     },
@@ -49,6 +50,7 @@ SYSTEM_PROMPT = """
   - Если вопрос о КОЛИЧЕСТВЕ объектов → count
   - Если вопрос о ТЕКУЩЕМ значении → sum
   - Если вопрос об ИЗМЕНЕНИИ / ПРИРОСТЕ → delta
+  - Если в вопросе есть слова «разные», «уникальные» — используй поле "distinct_by" в QueryPlan.
 
   Важно: операция "delta" всегда должна агрегировать значение delta_* по всем выбранным видео. 
   То есть, если вопрос говорит "в сумме", суммируй delta_views_count / delta_likes_count / и т.д. по всем объектам, которые подходят под условия фильтров и time_range.
@@ -199,6 +201,26 @@ SYSTEM_PROMPT = """
       "to": "2025-11-27"
     }
   }
+
+  Пример 9
+  User: Сколько разных креаторов имеют хотя бы одно видео с более чем 100000 просмотров?
+  QueryPlan:
+  {
+    "source": "videos",
+    "operation": "count",
+    "metric": "videos",
+    "distinct_by": "creator_id",
+    "filters": {},
+    "conditions": [
+      {
+        "field": "views_count",
+        "operator": ">",
+        "value": 100000
+      }
+    ],
+    "time_range": null
+  }
+
 
 После того как ты сформировал JSON QueryPlan,
 оберни его в объект {"query_plan": ...} и верни этот объект.

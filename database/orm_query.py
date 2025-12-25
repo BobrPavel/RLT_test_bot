@@ -110,7 +110,12 @@ async def execute_query(plan: dict, session: AsyncSession): # Получапет
 
     column_name = METRIC_MAP[plan["metric"]][metric_type]
     column = getattr(model, column_name)
-    agg_column = OPERATION_MAP[plan["operation"]](column)
+
+    if plan["operation"] == "count" and plan.get("distinct_by"):
+        distinct_col = getattr(model, plan["distinct_by"])
+        agg_column = func.count(func.distinct(distinct_col))
+    else:
+        agg_column = OPERATION_MAP[plan["operation"]](column)
 
     
     stmt = select(agg_column)
@@ -166,17 +171,17 @@ async def execute_query(plan: dict, session: AsyncSession): # Получапет
                 if plan["source"] == "videos"
                 else model.created_at
             )
-        
+
             start_raw = time_range["from"]
             end_raw = time_range["to"]
-        
+
             start_date = datetime.fromisoformat(start_raw).replace(tzinfo=timezone.utc)
             end_date = datetime.fromisoformat(end_raw).replace(tzinfo=timezone.utc)
-        
+
             # Если в 'to' время не указано, расширяем до конца дня
             if "T" not in end_raw:
                 end_date += timedelta(days=1)
-        
+
             stmt = stmt.where(
                 date_column >= start_date,
                 date_column < end_date,
